@@ -15,7 +15,7 @@ import (
 	"os"
 )
 
-const MONGO_URL = "localhost:27017"
+const MONGO_URL = "mongodb://admin:UU8pXgPrGxL-@localhost:27017"
 
 type user struct {
 	Id        bson.ObjectId  `bson:"_id"`
@@ -58,8 +58,9 @@ func main() {
 	mux.HandleFunc("/logged", logged)
 
 	log.Println("Listetning...")
+	log.Println(os.Getenv("OPENSHIFT_GOLANG_PORT"))
 	if os.Getenv("OPENSHIFT_GOLANG_PORT") != "" {
-		http.ListenAndServe(os.Getenv("OPENSHIFT_GOLANG_PORT"), mux)
+		http.ListenAndServe(":" + os.Getenv("OPENSHIFT_GOLANG_PORT"), mux)
 	} else {
 		http.ListenAndServe(":3000", mux)
 	}
