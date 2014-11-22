@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/goauth2/oauth"
 	"github.com/google/go-github/github"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/yosssi/ace"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -30,6 +31,8 @@ var oauthCfg = &oauth.Config{
 	TokenURL: "https://github.com/login/oauth/access_token",
 	RedirectURL: "http://localhost:3000/logged",
 }
+
+var store = sessions.NewCookieStore([]byte("big-secret-here"))
 
 
 func main() {
@@ -59,6 +62,11 @@ func main() {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
+	// Get session info
+	session, _ := store.Get(r, "session")
+	log.Println(session.Values["user"])
+
+	// Get template
 	tpl, err := ace.Load("views/index", "", nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -67,6 +75,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 
 	data := map[string]interface{}{
 		"Title": "index page",
+		"User": session.Values["user"],
 		"Msgs": []string{"1", "2", "3"},
 		"Map": map[string]int{
 			"ceva": 0,
@@ -119,4 +128,11 @@ func logged(w http.ResponseWriter, r *http.Request) {
 	user, _, _ := client.Users.Get("")
 	log.Println(user)
 	log.Println(string(*user.Login))
+
+	// Save username to session
+	session, _ := store.Get(r, "session")
+    // Set some session values.
+    session.Values["user"] = string(*user.Login)
+    // Save it
+    session.Save(r, w)
 }
