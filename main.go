@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/goauth2/oauth"
 	"github.com/google/go-github/github"
 	"github.com/gorilla/mux"
+	"github.com/yosssi/ace"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
@@ -58,7 +59,24 @@ func main() {
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello World!"))
+	tpl, err := ace.Load("views/index", "", nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := map[string]interface{}{
+		"Title": "index page",
+		"Msgs": []string{"1", "2", "3"},
+		"Map": map[string]int{
+			"ceva": 0,
+		},
+	}
+
+	if err := tpl.Execute(w, data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func login(w http.ResponseWriter, r *http.Request) {

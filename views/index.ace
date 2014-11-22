@@ -1,0 +1,15 @@
+= doctype html
+html lang=en
+  head
+    meta charset=utf-8
+    title Hub
+  body
+    h1 Welcome to Hub!
+
+    h5 {{.Title}}
+    ul
+      {{range .Msgs}}
+        li {{.}}
+      {{end}}
+
+    h5 {{.Map.ceva}}
