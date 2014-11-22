@@ -5,6 +5,7 @@ html lang=en
     title Hub
   body
     h1 Welcome to Hub!
+    a href="/login" Login
 
     h5 {{.Title}}
     ul
