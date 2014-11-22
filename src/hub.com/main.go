@@ -58,7 +58,11 @@ func main() {
 	mux.HandleFunc("/logged", logged)
 
 	log.Println("Listetning...")
-	http.ListenAndServe(":3000", mux)
+	if os.Getenv("OPENSHIFT_GOLANG_PORT") != "" {
+		http.ListenAndServe(os.Getenv("OPENSHIFT_GOLANG_PORT"), mux)
+	} else {
+		http.ListenAndServe(":3000", mux)
+	}
 }
 
 func index(w http.ResponseWriter, r *http.Request) {
@@ -135,4 +139,7 @@ func logged(w http.ResponseWriter, r *http.Request) {
     session.Values["user"] = string(*user.Login)
     // Save it
     session.Save(r, w)
+
+    // Redirect to index
+	http.Redirect(w, r, "/", http.StatusFound)
 }
