@@ -15,7 +15,7 @@ import (
 	"os"
 )
 
-const MONGO_URL = "mongodb://admin:UU8pXgPrGxL-@localhost:27017"
+const MONGO_URL = "mongodb://admin:UU8pXgPrGxL-@localhost:27017/hub"
 
 type user struct {
 	Id        bson.ObjectId  `bson:"_id"`
