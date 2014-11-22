@@ -37,7 +37,11 @@ var store = sessions.NewCookieStore([]byte("big-secret-here"))
 
 func main() {
 
-	sess, err := mgo.Dial(MONGO_URL)
+	mongo := MONGO_URL
+	if os.Getenv("OPENSHIFT_MONGODB_DB_URL") != "" {
+		mongo = os.Getenv("OPENSHIFT_MONGODB_DB_URL")
+	}
+	sess, err := mgo.Dial(mongo)
 	if err != nil {
 		log.Fatalln("Cannot connect to mongo.")
 		os.Exit(1)
