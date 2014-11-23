@@ -45,6 +45,7 @@ func main() {
 	mux.HandleFunc("/login/{user}", HandleDevLogin)
 	mux.HandleFunc("/logged", HandleGitHubLoginResponse)
 	mux.HandleFunc("/logout", HandleLogout)
+	mux.HandleFunc("/{*}", Handle404)
 
 	log.Println("Listetning...")
 	if os.Getenv("PORT") != "" {
@@ -182,3 +183,8 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
     // Redirect to index
 	http.Redirect(w, r, "/", http.StatusFound)
 }
+
+func Handle404(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("404: Page not found. Go away!"))
+}
+
