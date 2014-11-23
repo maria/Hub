@@ -29,7 +29,7 @@ var oauthCfg = &oauth.Config{
  
 	AuthURL: "https://github.com/login/oauth/authorize",
 	TokenURL: "https://github.com/login/oauth/access_token",
-	RedirectURL: "http://localhost:3000/logged",
+	RedirectURL: "http://hub-marianitadn.rhcloud.com/logged",
 }
 
 var store = sessions.NewCookieStore([]byte("big-secret-here"))
