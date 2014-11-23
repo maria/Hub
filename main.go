@@ -15,7 +15,7 @@ import (
 	"os"
 )
 
-const MONGO_URL = "mongodb://admin:UU8pXgPrGxL-@localhost:27017/hub"
+const MONGO_URL = "localhost/hub"
 
 type user struct {
 	Id        bson.ObjectId  `bson:"_id"`
@@ -60,9 +60,9 @@ func main() {
 	mux.HandleFunc("/", index)
 	mux.HandleFunc("/login", login)
 	mux.HandleFunc("/logged", logged)
+	mux.HandleFunc("/logout", logout)
 
 	log.Println("Listetning...")
-	log.Println(os.Getenv("PORT"))
 	if os.Getenv("PORT") != "" {
 		http.ListenAndServe(os.Getenv("HOST") + ":" + os.Getenv("PORT"), mux)
 	} else {
@@ -104,6 +104,16 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect user to that page
 	http.Redirect(w, r, url, http.StatusFound)
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	// Get user session and delete it
+	session, _ := store.Get(r, "session")
+	delete(session.Values, "user")
+	_ = session.Save(r, w)
+
+	// Redirect user to that page
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func logged(w http.ResponseWriter, r *http.Request) {
