@@ -1,17 +1,19 @@
 package main
 
 import (
-	"code.google.com/p/goauth2/oauth"
-	"github.com/google/go-github/github"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
-	"github.com/yosssi/ace"
-	"gopkg.in/mgo.v2"
-	"io/ioutil"
+	"html/template"
+    "io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+
+	"code.google.com/p/goauth2/oauth"
+	"github.com/gin-gonic/gin"
+	"github.com/google/go-github/github"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
+	"gopkg.in/mgo.v2"
 )
 
 const MONGO_URL = "localhost/hub"
@@ -28,7 +30,7 @@ var oauthCfg = &oauth.Config{
 
 	ClientId: "cc2a22d7df2930f8fd18",
 	ClientSecret: "b6147809adea6abb45ef5ee4cc6d212934a91aed",
- 
+
 	AuthURL: "https://github.com/login/oauth/authorize",
 	TokenURL: "https://github.com/login/oauth/access_token",
 	RedirectURL: "http://localhost:3000/logged",
@@ -39,47 +41,38 @@ var store = sessions.NewCookieStore([]byte("big-secret-here"))
 
 func main() {
 
-	mux := mux.NewRouter()
-	mux.HandleFunc("/", index)
-	mux.HandleFunc("/login", HandleLogin)
-	mux.HandleFunc("/login/{user}", HandleDevLogin)
-	mux.HandleFunc("/logged", HandleGitHubLoginResponse)
-	mux.HandleFunc("/logout", HandleLogout)
-	mux.HandleFunc("/{*}", Handle404)
+	app := gin.Default()
 
-	log.Println("Listetning...")
+	html := template.Must(template.ParseGlob("views/*.ace"))
+	app.SetHTMLTemplate(html)
+
+	app.GET("/", index)
+	//app.GET("/login", HandleLogin)
+	//app.GET("/login/:user", HandleDevLogin)
+	//app.POST("/logged", HandleGitHubLoginResponse)
+	//app.DELETE("/logout", HandleLogout)
+	//app.GET("/{*}", Handle404)
+
+	address := ":3000"
 	if os.Getenv("PORT") != "" {
-		http.ListenAndServe(os.Getenv("HOST") + ":" + os.Getenv("PORT"), mux)
-	} else {
-		http.ListenAndServe(":3000", mux)
+		address = os.Getenv("HOST") + ":" + os.Getenv("PORT")
 	}
+
+	app.Run(address)
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
-	// Get session info
-	session, _ := store.Get(r, "session")
-	log.Println(session.Values["user"])
-
-	// Get template
-	tpl, err := ace.Load("views/index", "", nil)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+func index(c *gin.Context) {
 
 	data := map[string]interface{}{
 		"Title": "index page",
-		"User": session.Values["user"],
+		"User": "maria",
 		"Msgs": []string{"1", "2", "3"},
 		"Map": map[string]int{
 			"ceva": 0,
 		},
 	}
 
-	if err := tpl.Execute(w, data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	c.HTML(201, "index.ace", data)
 }
 
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
