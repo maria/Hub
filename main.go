@@ -7,7 +7,6 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/yosssi/ace"
 	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,8 +17,11 @@ import (
 const MONGO_URL = "localhost/hub"
 
 type user struct {
-	Id        bson.ObjectId  `bson:"_id"`
-	Username  string         `bson:"username"`
+	ID         int     `bson:"_id"`
+	Username   string  `bson:"username"`
+	Fullname   string  `bson:"fullname"`
+	Followers  int     `bson:"followers"`
+	Following  int     `bson:"following"`
 }
 
 var oauthCfg = &oauth.Config{
@@ -29,32 +31,13 @@ var oauthCfg = &oauth.Config{
  
 	AuthURL: "https://github.com/login/oauth/authorize",
 	TokenURL: "https://github.com/login/oauth/access_token",
-	RedirectURL: "http://hub-marianitadn.rhcloud.com/logged",
+	RedirectURL: "http://localhost:3000/logged",
 }
 
 var store = sessions.NewCookieStore([]byte("big-secret-here"))
 
 
 func main() {
-
-	mongo := MONGO_URL
-	if os.Getenv("OPENSHIFT_MONGODB_DB_URL") != "" {
-		mongo = os.Getenv("OPENSHIFT_MONGODB_DB_URL")
-	}
-	sess, err := mgo.Dial(mongo)
-	if err != nil {
-		log.Fatalln("Cannot connect to mongo.")
-		os.Exit(1)
-	}
-	defer sess.Close()
-
-	collection := sess.DB("test").C("foo")
-	doc := user{Id: bson.NewObjectId(), Username: "root"}
-	err = collection.Insert(doc)
-	if err != nil {
-		log.Println("No insert.")
-		os.Exit(1)
-	}
 
 	mux := mux.NewRouter()
 	mux.HandleFunc("/", index)
@@ -160,13 +143,39 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 	// log.Println(repos)
 
 	// Get current user info
-	user, _, _ := client.Users.Get("")
-	log.Println(string(*user.Login))
+	userinfo, _, _ := client.Users.Get("")
+
+	// Connect to mongo
+	mongourl := MONGO_URL
+	if os.Getenv("OPENSHIFT_MONGODB_DB_URL") != "" {
+		mongourl = os.Getenv("OPENSHIFT_MONGODB_DB_URL")
+	}
+	mongo, err := mgo.Dial(mongourl)
+	if err != nil {
+		log.Fatalln("Cannot connect to mongo: %s", err)
+		os.Exit(1)
+	}
+	defer mongo.Close()
+
+	// Add user to db
+	collection := mongo.DB("hub").C("users")
+	doc := user{
+		ID:        int(*userinfo.ID),
+		Username:  string(*userinfo.Login),
+		Fullname:  string(*userinfo.Name),
+		Followers: int(*userinfo.Followers),
+		Following: int(*userinfo.Following),
+	}
+	err = collection.Insert(doc)
+	if err != nil {
+		log.Println("Could not add user: %s", err)
+		os.Exit(1)
+	}
 
 	// Save username to session
 	session, _ := store.Get(r, "session")
     // Set some session values.
-    session.Values["user"] = string(*user.Login)
+    session.Values["user"] = string(*userinfo.Login)
     // Save it
     session.Save(r, w)
 
