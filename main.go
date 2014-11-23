@@ -63,7 +63,7 @@ func main() {
 
 	log.Println("Listetning...")
 	log.Println(os.Getenv("PORT"))
-	if os.Getenv("OPENSHIFT_GOLANG_PORT") != "" {
+	if os.Getenv("PORT") != "" {
 		http.ListenAndServe(os.Getenv("HOST") + ":" + os.Getenv("PORT"), mux)
 	} else {
 		http.ListenAndServe(":3000", mux)
