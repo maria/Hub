@@ -167,7 +167,7 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 		Followers: int(*userinfo.Followers),
 		Following: int(*userinfo.Following),
 	}
-	err = collection.Insert(doc)
+	_, err = collection.UpsertId(doc.ID, doc)
 	if err != nil {
 		log.Println("Could not add user: %s", err)
 		os.Exit(1)
