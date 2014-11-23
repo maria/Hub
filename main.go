@@ -58,9 +58,10 @@ func main() {
 
 	mux := mux.NewRouter()
 	mux.HandleFunc("/", index)
-	mux.HandleFunc("/login", login)
-	mux.HandleFunc("/logged", logged)
-	mux.HandleFunc("/logout", logout)
+	mux.HandleFunc("/login", HandleLogin)
+	mux.HandleFunc("/login/{user}", HandleDevLogin)
+	mux.HandleFunc("/logged", HandleGitHubLoginResponse)
+	mux.HandleFunc("/logout", HandleLogout)
 
 	log.Println("Listetning...")
 	if os.Getenv("PORT") != "" {
@@ -97,7 +98,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func login(w http.ResponseWriter, r *http.Request) {
+func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// Go to GitHub Authentication page
 	url := oauthCfg.AuthURL + "?client_id=" + oauthCfg.ClientId
 	url += "&redirect_uri=" + oauthCfg.RedirectURL
@@ -106,7 +107,22 @@ func login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
-func logout(w http.ResponseWriter, r *http.Request) {
+func HandleDevLogin(w http.ResponseWriter, r *http.Request) {
+	// Get user from URL
+	user := mux.Vars(r)["user"]
+
+	// Save username to session
+	session, _ := store.Get(r, "session")
+    // Set some session values.
+    session.Values["user"] = user
+    // Save it
+    session.Save(r, w)
+
+	// Redirect user to index
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func HandleLogout(w http.ResponseWriter, r *http.Request) {
 	// Get user session and delete it
 	session, _ := store.Get(r, "session")
 	delete(session.Values, "user")
@@ -116,7 +132,7 @@ func logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func logged(w http.ResponseWriter, r *http.Request) {
+func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 	// Get the code from the response
 	code := r.FormValue("code")
 
@@ -145,7 +161,6 @@ func logged(w http.ResponseWriter, r *http.Request) {
 
 	// Get current user info
 	user, _, _ := client.Users.Get("")
-	log.Println(user)
 	log.Println(string(*user.Login))
 
 	// Save username to session
