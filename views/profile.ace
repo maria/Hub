@@ -1,0 +1,12 @@
+= doctype html
+html lang=en
+  head
+    meta charset=utf-8
+    title Hub
+  body
+    h1 Profile page
+    h2 {{.User.Fullname}}
+    p {{.User.Username}}
+    br
+    p Following: {{.User.Following}}
+    p Followers: {{.User.Followers}}

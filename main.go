@@ -7,22 +7,17 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/yosssi/ace"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+
+	"./model"
 )
 
 const MONGO_URL = "localhost/hub"
-
-type user struct {
-	ID         int     `bson:"_id"`
-	Username   string  `bson:"username"`
-	Fullname   string  `bson:"fullname"`
-	Followers  int     `bson:"followers"`
-	Following  int     `bson:"following"`
-}
 
 var oauthCfg = &oauth.Config{
 
@@ -35,9 +30,25 @@ var oauthCfg = &oauth.Config{
 }
 
 var store = sessions.NewCookieStore([]byte("big-secret-here"))
-
+var db *mgo.Database
 
 func main() {
+
+	// Connect to mongo
+	mongourl := MONGO_URL
+	if os.Getenv("OPENSHIFT_MONGODB_DB_URL") != "" {
+		mongourl = os.Getenv("OPENSHIFT_MONGODB_DB_URL")
+	}
+	mongo, err := mgo.Dial(mongourl)
+	if err != nil {
+		log.Fatalln("Cannot connect to mongo: ", err)
+		os.Exit(1)
+	}
+	
+	// Get hub database
+	db = mongo.DB("hub")
+	defer mongo.Close()
+
 
 	mux := mux.NewRouter()
 	mux.HandleFunc("/", index)
@@ -45,6 +56,7 @@ func main() {
 	mux.HandleFunc("/login/{user}", HandleDevLogin)
 	mux.HandleFunc("/logged", HandleGitHubLoginResponse)
 	mux.HandleFunc("/logout", HandleLogout)
+	mux.HandleFunc("/{user}/profile", HandleUserProfile)
 	mux.HandleFunc("/{*}", Handle404)
 
 	log.Println("Listetning...")
@@ -116,6 +128,37 @@ func HandleLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
+func HandleUserProfile(w http.ResponseWriter, r *http.Request) {
+	// Get session info
+	session, _ := store.Get(r, "session")
+
+	// Add user to db
+	user := model.User{}
+	collection := db.C("users")
+	err := collection.Find(bson.M{"username":session.Values["user"]}).One(&user)
+	if err != nil {
+		log.Fatalln("Cannot get user profile: ", err)
+		os.Exit(1)
+	}
+
+	// Get template
+	tpl, err := ace.Load("views/profile", "", nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := map[string]interface{}{
+		"Title": "profile page",
+		"User": user,
+	}
+
+	if err := tpl.Execute(w, data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 	// Get the code from the response
 	code := r.FormValue("code")
@@ -146,30 +189,18 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 	// Get current user info
 	userinfo, _, _ := client.Users.Get("")
 
-	// Connect to mongo
-	mongourl := MONGO_URL
-	if os.Getenv("OPENSHIFT_MONGODB_DB_URL") != "" {
-		mongourl = os.Getenv("OPENSHIFT_MONGODB_DB_URL")
-	}
-	mongo, err := mgo.Dial(mongourl)
-	if err != nil {
-		log.Fatalln("Cannot connect to mongo: %s", err)
-		os.Exit(1)
-	}
-	defer mongo.Close()
-
 	// Add user to db
-	collection := mongo.DB("hub").C("users")
-	doc := user{
+	collection := db.C("users")
+	doc := model.User{
 		ID:        int(*userinfo.ID),
 		Username:  string(*userinfo.Login),
 		Fullname:  string(*userinfo.Name),
 		Followers: int(*userinfo.Followers),
 		Following: int(*userinfo.Following),
 	}
-	_, err = collection.UpsertId(doc.ID, doc)
+	_, err := collection.UpsertId(doc.ID, doc)
 	if err != nil {
-		log.Println("Could not add user: %s", err)
+		log.Println("Could not add user: ", err)
 		os.Exit(1)
 	}
 
