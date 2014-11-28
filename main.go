@@ -67,6 +67,41 @@ func main() {
 	}
 }
 
+func updateRepos(user string, access_token string) {
+	// Using octokit
+	t := &oauth.Transport{
+		Token: &oauth.Token{AccessToken: access_token},
+	}
+	client := github.NewClient(t.Client())
+
+	// List all repositories for the authenticated user
+	repos, _, _ := client.Repositories.List("", nil)
+
+	// Push public repos to db
+	for _, repo := range repos {
+		if (! *repo.Private) {
+
+			collection := db.C("repos")
+			doc := model.Repo{
+				ID:          int(*repo.ID),
+				Name:        string(*repo.Name),
+				User:        string(user),
+				Owner:       string(*repo.Owner.Login),
+				Description: string(*repo.Description),
+				Fork:        bool(*repo.Fork),
+				Stars:       int(*repo.StargazersCount),
+				Watchers:    int(*repo.WatchersCount),
+				Forks:       int(*repo.ForksCount),
+			}
+			_, err := collection.UpsertId(doc.ID, doc)
+			if err != nil {
+				log.Println("Could not upsert repo: ", err)
+				os.Exit(1)
+			}
+		}
+	}
+}
+
 func index(w http.ResponseWriter, r *http.Request) {
 	// Get session info
 	session, _ := store.Get(r, "session")
@@ -132,12 +167,21 @@ func HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 	// Get session info
 	session, _ := store.Get(r, "session")
 
-	// Add user to db
+	// Get user from db
 	user := model.User{}
 	collection := db.C("users")
 	err := collection.Find(bson.M{"username":session.Values["user"]}).One(&user)
 	if err != nil {
 		log.Fatalln("Cannot get user profile: ", err)
+		os.Exit(1)
+	}
+
+	// Get all user repos
+	repos := []model.Repo{}
+	collection = db.C("repos")
+	err = collection.Find(bson.M{"user":session.Values["user"]}).All(&repos)
+	if err != nil {
+		log.Fatalln("Cannot get user repos: ", err)
 		os.Exit(1)
 	}
 
@@ -151,6 +195,7 @@ func HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 	data := map[string]interface{}{
 		"Title": "profile page",
 		"User": user,
+		"Repos": repos,
 	}
 
 	if err := tpl.Execute(w, data); err != nil {
@@ -182,10 +227,6 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 
 	client := github.NewClient(t.Client())
 
-	// list all repositories for the authenticated user
-	// repos, _, _ := client.Repositories.List()
-	// log.Println(repos)
-
 	// Get current user info
 	userinfo, _, _ := client.Users.Get("")
 
@@ -210,6 +251,9 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
     session.Values["user"] = string(*userinfo.Login)
     // Save it
     session.Save(r, w)
+
+    // Update user repos
+	updateRepos(string(*userinfo.Login), access_token)
 
     // Redirect to index
 	http.Redirect(w, r, "/", http.StatusFound)

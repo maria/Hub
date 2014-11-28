@@ -10,3 +10,8 @@ html lang=en
     br
     p Following: {{.User.Following}}
     p Followers: {{.User.Followers}}
+
+    ul
+      {{range .Repos}}
+        li {{.Name}}
+      {{end}}

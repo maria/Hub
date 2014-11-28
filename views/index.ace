@@ -6,6 +6,8 @@ html lang=en
   body
     h1 Welcome to Hub!
     {{if .User}}
+      a href="/{{.User}}/profile" Profile
+      br
       a href="/logout" Logout
     {{else}}
       a href="/login" Login      
