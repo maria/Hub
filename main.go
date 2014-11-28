@@ -108,7 +108,7 @@ func index(w http.ResponseWriter, r *http.Request) {
 	log.Println(session.Values["user"])
 
 	// Get template
-	tpl, err := ace.Load("views/index", "", nil)
+	tpl, err := ace.Load("views/base", "views/index", nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -186,7 +186,7 @@ func HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get template
-	tpl, err := ace.Load("views/profile", "", nil)
+	tpl, err := ace.Load("views/base", "views/profile", nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -1,28 +1,15 @@
-= doctype html
-html lang=en
-  head
-    meta charset=utf-8
-    title Hub
-  body
-    h1 Welcome to Hub!
-    {{if .User}}
-      a href="/{{.User}}/profile" Profile
-      br
-      a href="/logout" Logout
-    {{else}}
-      a href="/login" Login      
+= content main
+
+  h5 {{.Title}}
+  ul
+    {{range .Msgs}}
+      li {{.}}
     {{end}}
 
-    h5 {{.Title}}
-    ul
-      {{range .Msgs}}
-        li {{.}}
-      {{end}}
+  h5 {{.Map.ceva}}
 
-    h5 {{.Map.ceva}}
-
-    {{if .User}}
-      h2 Hello, {{.User}}
-    {{else}}
-      h2 You are not logged in.
-    {{end}}
+  {{if .User}}
+    h2 Hello, {{.User}}
+  {{else}}
+    h2 You are not logged in.
+  {{end}}
