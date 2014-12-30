@@ -14,7 +14,7 @@ import (
 	"net/url"
 	"os"
 
-	"./model"
+	"github.com/marianitadn/hub/model"
 )
 
 const MONGO_URL = "localhost/hub"
