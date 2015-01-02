@@ -17,7 +17,7 @@ import (
 	"github.com/marianitadn/hub/model"
 )
 
-const MONGO_URL = "mongodb://root:root@ds029811.mongolab.com:29811/hub"
+const MONGO_URL = "mongodb://root:root@ds027771.mongolab.com:27771/hub"
 
 var oauthCfg = &oauth.Config{
 
