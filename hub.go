@@ -34,10 +34,12 @@ var oauthCfg = &oauth.Config{}
 
 
 func setEnv() {
-	var MONGO_URL, SECRET string
+	var MONGO_URL, SECRET, URL string
 
 	if os.Getenv("GOENV") == PRODUCTION_ENV {
 		// Get vars from ENV
+		URL = "localhost:" + os.Getenv("PORT")
+
 		MONGO_URL = os.Getenv("MONGO_URL")
 		SECRET = os.Getenv("SESSION_SECRET")
 
@@ -48,6 +50,8 @@ func setEnv() {
 		oauthCfg.RedirectURL = "https://xphub.herokuapp.com/logged"
 
 	} else {
+		URL = "localhost:3000"
+
 		MONGO_URL = "localhost/hub"
 		SECRET = "big-secret-here"
 	}
@@ -59,7 +63,7 @@ func setEnv() {
 		os.Exit(1)
 	}
 
-	ENV.URL = "localhost:3000"
+	ENV.URL = URL
 	ENV.STORE = sessions.NewCookieStore([]byte(SECRET))
 	ENV.DB = mongo.DB("hub")
 
