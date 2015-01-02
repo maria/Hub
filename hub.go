@@ -38,7 +38,7 @@ func setEnv() {
 
 	if os.Getenv("GOENV") == PRODUCTION_ENV {
 		// Get vars from ENV
-		URL = "localhost:" + os.Getenv("PORT")
+		URL = ":" + os.Getenv("PORT")
 
 		MONGO_URL = os.Getenv("MONGO_URL")
 		SECRET = os.Getenv("SESSION_SECRET")
@@ -66,8 +66,6 @@ func setEnv() {
 	ENV.URL = URL
 	ENV.STORE = sessions.NewCookieStore([]byte(SECRET))
 	ENV.DB = mongo.DB("hub")
-
-	defer mongo.Close()
 }
 
 func main() {
