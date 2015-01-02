@@ -1,0 +1,51 @@
+{
+	"ImportPath": "github.com/marianitadn/Hub",
+	"GoVersion": "go1.3.3",
+	"Packages": [
+		"github.com/marianitadn/Hub/src"
+	],
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/goauth2/oauth",
+			"Comment": "weekly-56",
+			"Rev": "afe77d958c701557ec5dc56f6936fcc194d15520"
+		},
+		{
+			"ImportPath": "github.com/google/go-github/github",
+			"Rev": "62a50bb14ba982864a5f54e344d0e05764fb41b1"
+		},
+		{
+			"ImportPath": "github.com/google/go-querystring/query",
+			"Rev": "d8840cbb2baa915f4836edda4750050a2c0b7aea"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "14f550f51af52180c2eefed15e5fd18d63c0a64a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
+		},
+		{
+			"ImportPath": "github.com/gorilla/securecookie",
+			"Rev": "f0559d009e6943011cd1ba6eb16195cf5e0ed326"
+		},
+		{
+			"ImportPath": "github.com/gorilla/sessions",
+			"Rev": "aa5e036e6c44aec69a32eb41097001978b29ad31"
+		},
+		{
+			"ImportPath": "github.com/marianitadn/hub/src/model",
+			"Rev": "2fbde7beaf03b22cf5a8bda6f0342e49d7fb879d"
+		},
+		{
+			"ImportPath": "github.com/yosssi/ace",
+			"Comment": "v0.0.4-25-gdab9853",
+			"Rev": "dab9853b6afdf11755ef90f95a46b5cd9b0ef881"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2",
+			"Rev": "e2e914857713db7497cca2bd7fc0b030fc9cb22d"
+		}
+	]
+}
