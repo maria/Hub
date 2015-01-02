@@ -1,0 +1,28 @@
+body {
+	margin: 0px;
+	padding: 0px;
+}
+
+.container {
+	width: 1000px;
+	margin: 0px auto 0px auto;
+}
+
+.left {
+	width: 280px;
+	float: left;
+	padding: 10px 10px 100px 10px;
+	background-color: #68b25b;
+}
+
+.profile-avatar {
+	width: 280px;
+	height: 280px;
+	border-radius: 6px;
+}
+
+.right {
+	width: 680px;
+	float: left;
+	padding: 10px;
+}

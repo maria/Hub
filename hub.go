@@ -14,7 +14,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/marianitadn/hub/model"
+	"github.com/marianitadn/Hub/model"
 )
 
 const PRODUCTION_ENV = "production"
@@ -80,6 +80,8 @@ func main() {
 	mux.HandleFunc("/logged", HandleGitHubLoginResponse)
 	mux.HandleFunc("/logout", HandleLogout)
 	mux.HandleFunc("/{user}/profile", HandleUserProfile)
+
+	mux.PathPrefix("/").Handler(http.FileServer(http.Dir("./static/")))
 	mux.HandleFunc("/{*}", Handle404)
 
 	log.Println("App started at:", ENV.URL)
@@ -253,6 +255,7 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 	collection := ENV.DB.C("users")
 	doc := model.User{
 		ID:        int(*userinfo.ID),
+		Avatar:    string(*userinfo.AvatarURL),
 		Username:  string(*userinfo.Login),
 		Fullname:  string(*userinfo.Name),
 		Followers: int(*userinfo.Followers),

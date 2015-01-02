@@ -2,6 +2,8 @@
 html lang=en
   head
     meta charset=utf-8
+    link rel=stylesheet type=text/css href=/css/style.css
+
     {{if .Title}}
       title {{.Title}}
     {{else}}
@@ -9,15 +11,20 @@ html lang=en
     {{end}}
 
   body
-    nav
-      {{if .User}}
-        a href="/" Home
-        br
-        a href="/{{.User}}/profile" Profile
-        br
-        a href="/logout" Logout
-      {{else}}
-        a href="/login" Login      
-      {{end}}
-    container
-      = yield main
+    .container
+      .left
+        h1 XpHub
+        = yield left
+      .right
+        nav
+          {{if .User}}
+            a href="/" Home
+            br
+            a href="/{{.User}}/profile" Profile
+            br
+            a href="/logout" Logout
+          {{else}}
+            a href="/login" Login
+          {{end}}
+        main
+          = yield main
