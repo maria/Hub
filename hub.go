@@ -17,38 +17,59 @@ import (
 	"github.com/marianitadn/hub/model"
 )
 
-const MONGO_URL = "mongodb://root:root@ds027771.mongolab.com:27771/hub"
+const PRODUCTION_ENV = "production"
+const DEVELOPMENT_ENV = "development"
 
-var oauthCfg = &oauth.Config{
-
-	ClientId: "cc2a22d7df2930f8fd18",
-	ClientSecret: "b6147809adea6abb45ef5ee4cc6d212934a91aed",
- 
-	AuthURL: "https://github.com/login/oauth/authorize",
-	TokenURL: "https://github.com/login/oauth/access_token",
-	RedirectURL: "https://polar-falls-5442.herokuapp.com/logged",
+type Context struct {
+	STORE 	*sessions.CookieStore
+	URL 	string
+	DB 		*mgo.Database
 }
 
-var store = sessions.NewCookieStore([]byte("big-secret-here"))
-var db *mgo.Database
+// App config
+var ENV = Context{}
+
+// GitHub credentials
+var oauthCfg = &oauth.Config{}
+
+
+func setEnv() {
+	var MONGO_URL, SECRET string
+
+	if os.Getenv("GOENV") == PRODUCTION_ENV {
+		// Get vars from ENV
+		MONGO_URL = os.Getenv("MONGO_URL")
+		SECRET = os.Getenv("SESSION_SECRET")
+
+		oauthCfg.ClientId = os.Getenv("GH_ID")
+		oauthCfg.ClientSecret = os.Getenv("GH_SECRET")
+		oauthCfg.AuthURL = "https://github.com/login/oauth/authorize"
+		oauthCfg.TokenURL = "https://github.com/login/oauth/access_token"
+		oauthCfg.RedirectURL = "https://xphub.herokuapp.com/logged"
+
+	} else {
+		MONGO_URL = "localhost/hub"
+		SECRET = "big-secret-here"
+	}
+
+	// Try mongoDB connection
+	mongo, err := mgo.Dial(MONGO_URL)
+	if err != nil {
+		log.Fatalln("Cannot reach mongoDB: ", err)
+		os.Exit(1)
+	}
+
+	ENV.URL = "localhost:3000"
+	ENV.STORE = sessions.NewCookieStore([]byte(SECRET))
+	ENV.DB = mongo.DB("hub")
+
+	defer mongo.Close()
+}
 
 func main() {
 
-	// Connect to mongo
-	mongourl := MONGO_URL
-	if os.Getenv("OPENSHIFT_MONGODB_DB_URL") != "" {
-		mongourl = os.Getenv("OPENSHIFT_MONGODB_DB_URL")
-	}
-	mongo, err := mgo.Dial(mongourl)
-	if err != nil {
-		log.Fatalln("Cannot connect to mongo: ", err)
-		os.Exit(1)
-	}
-	
-	// Get hub database
-	db = mongo.DB("hub")
-	defer mongo.Close()
-
+	// Set Environment variables
+	setEnv()
 
 	mux := mux.NewRouter()
 	mux.HandleFunc("/", index)
@@ -59,12 +80,8 @@ func main() {
 	mux.HandleFunc("/{user}/profile", HandleUserProfile)
 	mux.HandleFunc("/{*}", Handle404)
 
-	log.Println("Listetning...")
-	if os.Getenv("PORT") != "" {
-		http.ListenAndServe(os.Getenv("HOST") + ":" + os.Getenv("PORT"), mux)
-	} else {
-		http.ListenAndServe(":3000", mux)
-	}
+	log.Println("App started at:", ENV.URL)
+	http.ListenAndServe(ENV.URL, mux)
 }
 
 func updateRepos(user string, access_token string) {
@@ -81,7 +98,7 @@ func updateRepos(user string, access_token string) {
 	for _, repo := range repos {
 		if (! *repo.Private) {
 
-			collection := db.C("repos")
+			collection := ENV.DB.C("repos")
 			doc := model.Repo{
 				ID:          int(*repo.ID),
 				Name:        string(*repo.Name),
@@ -104,7 +121,7 @@ func updateRepos(user string, access_token string) {
 
 func index(w http.ResponseWriter, r *http.Request) {
 	// Get session info
-	session, _ := store.Get(r, "session")
+	session, _ := ENV.STORE.Get(r, "session")
 	log.Println(session.Values["user"])
 
 	// Get template
@@ -143,7 +160,7 @@ func HandleDevLogin(w http.ResponseWriter, r *http.Request) {
 	user := mux.Vars(r)["user"]
 
 	// Save username to session
-	session, _ := store.Get(r, "session")
+	session, _ := ENV.STORE.Get(r, "session")
     // Set some session values.
     session.Values["user"] = user
     // Save it
@@ -155,7 +172,7 @@ func HandleDevLogin(w http.ResponseWriter, r *http.Request) {
 
 func HandleLogout(w http.ResponseWriter, r *http.Request) {
 	// Get user session and delete it
-	session, _ := store.Get(r, "session")
+	session, _ := ENV.STORE.Get(r, "session")
 	delete(session.Values, "user")
 	_ = session.Save(r, w)
 
@@ -165,11 +182,11 @@ func HandleLogout(w http.ResponseWriter, r *http.Request) {
 
 func HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 	// Get session info
-	session, _ := store.Get(r, "session")
+	session, _ := ENV.STORE.Get(r, "session")
 
 	// Get user from db
 	user := model.User{}
-	collection := db.C("users")
+	collection := ENV.DB.C("users")
 	err := collection.Find(bson.M{"username":session.Values["user"]}).One(&user)
 	if err != nil {
 		log.Fatalln("Cannot get user profile: ", err)
@@ -178,7 +195,7 @@ func HandleUserProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Get all user repos
 	repos := []model.Repo{}
-	collection = db.C("repos")
+	collection = ENV.DB.C("repos")
 	err = collection.Find(bson.M{"user":session.Values["user"]}).All(&repos)
 	if err != nil {
 		log.Fatalln("Cannot get user repos: ", err)
@@ -231,7 +248,7 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 	userinfo, _, _ := client.Users.Get("")
 
 	// Add user to db
-	collection := db.C("users")
+	collection := ENV.DB.C("users")
 	doc := model.User{
 		ID:        int(*userinfo.ID),
 		Username:  string(*userinfo.Login),
@@ -246,7 +263,7 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save username to session
-	session, _ := store.Get(r, "session")
+	session, _ := ENV.STORE.Get(r, "session")
     // Set some session values.
     session.Values["user"] = string(*userinfo.Login)
     // Save it
