@@ -2,7 +2,7 @@
 	"ImportPath": "github.com/marianitadn/Hub",
 	"GoVersion": "go1.3.3",
 	"Packages": [
-		"github.com/marianitadn/Hub/src"
+		"github.com/marianitadn/Hub"
 	],
 	"Deps": [
 		{
