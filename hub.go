@@ -90,52 +90,6 @@ func main() {
 	http.ListenAndServe(ENV.URL, mux)
 }
 
-func updateRepos(user string, access_token string) {
-	// Using octokit
-	t := &oauth.Transport{
-		Token: &oauth.Token{AccessToken: access_token},
-	}
-	client := github.NewClient(t.Client())
-
-	// List all repositories for the authenticated user
-	repos, _, err := client.Repositories.List("", nil)
-	if err != nil {
-		log.Println("GitHub API call error for user repos: ", err)
-		os.Exit(1)
-	}
-
-	// Push public repos to db
-	for _, repo := range repos {
-		if (! *repo.Private) {
-
-			var repo_language = ""
-			if repo.Language != nil {
-				repo_language = *repo.Language
-			}
-
-			collection := ENV.DB.C("repos")
-			doc := model.Repo{
-				ID:          int(*repo.ID),
-				Name:        string(*repo.Name),
-				User:        string(user),
-				Owner:       string(*repo.Owner.Login),
-				URL:         string(*repo.HTMLURL),
-				Description: string(*repo.Description),
-				Fork:        bool(*repo.Fork),
-				Language:    repo_language,
-				Stars:       int(*repo.StargazersCount),
-				Watchers:    int(*repo.WatchersCount),
-				Forks:       int(*repo.ForksCount),
-			}
-			_, err := collection.UpsertId(doc.ID, doc)
-			if err != nil {
-				log.Println("Could not upsert repo: ", err)
-				os.Exit(1)
-			}
-		}
-	}
-}
-
 func index(w http.ResponseWriter, r *http.Request) {
 	// Get session info
 	session, _ := ENV.STORE.Get(r, "session")
@@ -291,7 +245,7 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
     session.Save(r, w)
 
     // Update user repos
-	updateRepos(string(*userinfo.Login), access_token)
+	go updateRepos(string(*userinfo.Login), access_token)
 
     // Redirect to index
 	http.Redirect(w, r, "/", http.StatusFound)
@@ -301,3 +255,70 @@ func Handle404(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("404: Page not found. Go away!"))
 }
 
+//// CONTROLERS ////
+func updateRepos(user string, access_token string) {
+	// Init octokit
+	t := &oauth.Transport{
+		Token: &oauth.Token{AccessToken: access_token},
+	}
+	client := github.NewClient(t.Client())
+
+	// Request all repositories for the authenticated user
+	repos, _, err := client.Repositories.List("", nil)
+	if err != nil {
+		log.Println("GitHub API call error for user repos: ", err)
+		os.Exit(1)
+	}
+
+	// Get all repositories from db
+	collection := ENV.DB.C("repos")
+	var known_repos []model.Repo
+	err = collection.Find(bson.M{"user": string(user)}).All(&known_repos)
+	if err != nil {
+		log.Println("Failed to get repos from db: ", err)
+		os.Exit(1)
+	}
+
+	// Push public repos to db
+	for _, repo := range repos {
+		if (! *repo.Private) {
+
+			var repo_language = ""
+			if repo.Language != nil {
+				repo_language = *repo.Language
+			}
+
+			doc := model.Repo{
+				ID:          int(*repo.ID),
+				Name:        string(*repo.Name),
+				User:        string(user),
+				Owner:       string(*repo.Owner.Login),
+				URL:         string(*repo.HTMLURL),
+				Description: string(*repo.Description),
+				Fork:        bool(*repo.Fork),
+				Language:    repo_language,
+				Stars:       int(*repo.StargazersCount),
+				Watchers:    int(*repo.WatchersCount),
+				Forks:       int(*repo.ForksCount),
+			}
+
+			// Compare to known repos and detect changes or new ones
+			var found = false
+			for _, repo := range known_repos {
+				if doc == repo {
+					found = true
+				}
+			}
+
+			// Upload changes
+			if !found {
+				_, err := collection.UpsertId(doc.ID, doc)
+				if err != nil {
+					log.Println("Could not upsert repo: ", err)
+					os.Exit(1)
+				}
+			}
+
+		}
+	}
+}
