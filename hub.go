@@ -15,6 +15,7 @@ import (
 	"os"
 
 	"github.com/marianitadn/Hub/model"
+	//"./model"
 )
 
 const PRODUCTION_ENV = "production"
@@ -48,6 +49,7 @@ func setEnv() {
 		oauthCfg.AuthURL = "https://github.com/login/oauth/authorize"
 		oauthCfg.TokenURL = "https://github.com/login/oauth/access_token"
 		oauthCfg.RedirectURL = "https://xphub.herokuapp.com/logged"
+		//oauthCfg.RedirectURL = "http://localhost:3000/logged"
 
 	} else {
 		URL = "localhost:3000"
@@ -96,11 +98,20 @@ func updateRepos(user string, access_token string) {
 	client := github.NewClient(t.Client())
 
 	// List all repositories for the authenticated user
-	repos, _, _ := client.Repositories.List("", nil)
+	repos, _, err := client.Repositories.List("", nil)
+	if err != nil {
+		log.Println("GitHub API call error for user repos: ", err)
+		os.Exit(1)
+	}
 
 	// Push public repos to db
 	for _, repo := range repos {
 		if (! *repo.Private) {
+
+			var repo_language = ""
+			if repo.Language != nil {
+				repo_language = *repo.Language
+			}
 
 			collection := ENV.DB.C("repos")
 			doc := model.Repo{
@@ -111,7 +122,7 @@ func updateRepos(user string, access_token string) {
 				URL:         string(*repo.HTMLURL),
 				Description: string(*repo.Description),
 				Fork:        bool(*repo.Fork),
-				Language:    string(*repo.Language),
+				Language:    repo_language,
 				Stars:       int(*repo.StargazersCount),
 				Watchers:    int(*repo.WatchersCount),
 				Forks:       int(*repo.ForksCount),
@@ -241,9 +252,8 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 	// Parse response and get access token
 	m, _ := url.ParseQuery(string(response))
 	access_token := m["access_token"][0]
-	log.Println(access_token)
 
-	// Using octokit
+	// Init octokit
 	t := &oauth.Transport{
 		Token: &oauth.Token{AccessToken: access_token},
 	}
@@ -251,7 +261,11 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 	client := github.NewClient(t.Client())
 
 	// Get current user info
-	userinfo, _, _ := client.Users.Get("")
+	userinfo, _, err := client.Users.Get("")
+	if err != nil {
+		log.Println("GitHub API call error for user info: ", err)
+		os.Exit(1)
+	}
 
 	// Add user to db
 	collection := ENV.DB.C("users")
@@ -263,7 +277,7 @@ func HandleGitHubLoginResponse(w http.ResponseWriter, r *http.Request) {
 		Followers: int(*userinfo.Followers),
 		Following: int(*userinfo.Following),
 	}
-	_, err := collection.UpsertId(doc.ID, doc)
+	_, err = collection.UpsertId(doc.ID, doc)
 	if err != nil {
 		log.Println("Could not add user: ", err)
 		os.Exit(1)
