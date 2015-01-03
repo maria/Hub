@@ -9,20 +9,29 @@ body {
 }
 
 .left {
-	width: 280px;
+	width: 220px;
 	float: left;
-	padding: 10px 10px 100px 10px;
+	padding: 10px 40px 100px 40px;
 	background-color: #68b25b;
+
+	-webkit-box-shadow: 3px 3px 5px 0px rgba(50, 50, 50, 0.2);
+	-moz-box-shadow:    3px 3px 5px 0px rgba(50, 50, 50, 0.2);
+	box-shadow:         3px 3px 5px 0px rgba(50, 50, 50, 0.2);
 }
 
 .profile-avatar {
-	width: 280px;
-	height: 280px;
+	width: 220px;
+	height: 220px;
 	border-radius: 6px;
 }
 
 .right {
-	width: 680px;
+	width: 620px;
 	float: left;
-	padding: 10px;
+	padding: 10px 40px 10px 40px;
+	margin: 0px 0px 50px 0px;
+}
+
+.repo {
+	margin-bottom: 10px;
 }

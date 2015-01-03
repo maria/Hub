@@ -1,15 +1,19 @@
 = content left
   img.profile-avatar src={{.User.Avatar}}
 
-= content main
-  h1 Profile page
   h2 {{.User.Fullname}}
   p {{.User.Username}}
-  br
+
   p Following: {{.User.Following}}
   p Followers: {{.User.Followers}}
 
-  ul
-    {{range .Repos}}
-      li {{.Name}}
-    {{end}}
+= content main
+  h1 Contributions
+  br
+
+  {{range .Repos}}
+    .repo
+    .repo-title
+      a href={{.URL}} {{.Name}}
+    .repo-description {{.Description}}
+  {{end}}

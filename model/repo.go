@@ -5,7 +5,9 @@ type Repo struct {
 	Name         string  `bson:"name"`
 	User         string  `bson:"user"`
 	Owner        string  `bson:"owner"`
+	URL          string  `bson:"url"`
 	Fork         bool    `bson:"fork"`
+	Language     string  `bson:"language"`
 	Description  string  `bson:"description"`
 	Stars        int     `bson:"stars"`
 	Forks        int     `bson:"forks"`
